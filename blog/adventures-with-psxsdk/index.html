@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>Adventures with PSXSDK - 350.su</title>
+        <meta name="viewport" content="width=device-width">
+        <link rel="stylesheet" href="/css/main.css">
+    </head>
+    <body>
+        <div class="site">
+          <div class="header">
+            <h1 class="title"><a href="/">350.su</a></h1>
+            <a class="extra" href="/">Home</a>
+                <a class="extra" href="/blog">Blog</a>
+                <a class="extra" href="/works">Works</a>
+                <a class="extra" href="/about">About</a>
+                <a class="extra" href="/contact">Contact</a>
+          </div>
+<h1>Adventures with PSXSDK</h1>
+<p class="meta">15 Feb 2015</p>
+<div class="post">
+<p>Since 2013, I&#39;m participating in the global game jam at a local site close to
+where I live. I do it mostly for fun and to socialize, rather than making a
+&quot;cool&quot; game. For this reason since two years I go home and sleep during the jam
+nights and come back in the morning. Better to take it easy, eh?</p>
+
+<p>One of the diversifiers for this year was the following:</p>
+
+<blockquote>
+<p><strong>NES</strong>: Make the game playable on an old school console, either directly or
+through an emulator.</p>
+</blockquote>
+
+<p>Remembering that I recently bought a PS One with 5 original games and two
+controllers(which was by the way a nice deal of 15 Euros), I decided to go with
+this diversifier to make a game for the PSX platform.</p>
+
+<p>After a small search on the internet I&#39;ve found two suitable SDK&#39;s for this:</p>
+
+<p>The first one is the Psy-Q SDK, which was the official SDK for the PS1. Today it
+has bunch of documentation on the internet, however it was not updated since
+ages. Furthermore, it only runs on 32-bit Windows systems and due to it&#39;s closed
+nature it&#39;s not easy to use it on a GNU/Linux system.</p>
+
+<p>The second one was the PSXSDK, which is actually a set of free and open source
+tools and the necessary toolchain for building programs compatible with the
+PSX hardware. Unfortunately for now it only supports 2D games, but I don&#39;t have
+enough hairs on my chest to code a 3D game for the PSX anyway.</p>
+
+<h2>Getting the PSXSDK</h2>
+
+<p>The SDK can be downloaded from <a href="http://unhaut.fav.cc/psxsdk/">here</a>. There is a
+precompiled toolchain available. It worked fine for me on Debian 7, just had to
+create some symbolic links to some libraries for the older version numbers. The
+SDK basically contains a GCC compiler configured for the MIPS architecture, and
+some programs for converting files.</p>
+
+<h2>Process of building a PSX game with PSXSDK</h2>
+
+<p>Here are the summery of the process for building a game:</p>
+
+<ul>
+<li>Convert the assets using the tools provided. For example you can convert WAV
+files to VAG, and BMP images to TIM. There is a very uncomfortable thing with
+creating TIM files, which I will explain later.</li>
+<li>Then you build the code and obtain an ELF binary.</li>
+<li>Using the elf2exe converter, create an EXE file from the ELF binary.</li>
+<li>Using the systemcnf tool, create a system.cnf file from the EXE.</li>
+</ul>
+
+<p>At this point you actually have the necessary files, and in theory you can run
+the EXE file using an emulator. However this was not working for me with the
+PCSX emulator. I could only run the BIN/CUE image on the emulator. The rest of
+the steps to do this are as follows:</p>
+
+<ul>
+<li>Create an ISO image of the root folder of your game where the necessary files
+are. I was using genisoimage to do this.</li>
+<li>Using the mkpsxiso tool provided, convert the ISO to a PSX compatible BIN and
+provide a license file. I&#39;ll write about this license file later.</li>
+</ul>
+
+<p>So you are actually done, you can either run this BIN image using an emulator or
+burn it to a disc.</p>
+
+<h2>Copy protection in the PSX</h2>
+
+<p>Detailed info about the security system in the PS1 can be found <a href="https://web.archive.org/web/20150215141841/http://wololo.net/2012/12/10/how-ps1-security-works/">here</a>.
+After reading the article it is possible to say that there is no importance of
+the license file that we put in our BIN image. As long as you are burning your
+disc with a conventional CD driver, you would either need a modded PSX or to do
+the swap-trick in order to run your game. Unfortunately my PS One was not modded
+so I had to do the swap-trick every time I tried to test the game on the device.</p>
+
+<h2>Video RAM of the PSX</h2>
+
+<p>As explained <a href="https://web.archive.org/web/20150215143146/https://github.com/zargener/psxsdkdoc/blob/master/psxsdk.adoc">here</a>,
+the VRAM of the PSX has a drawing and a display area, together with an area for
+loading the textures. Basically when you load an image file(TIM), you load it
+to the area on the right(see the image in the above link).</p>
+
+<p>When using the bmp2tim tool of the PSXSDK, you have to specify the origins for
+loading the image in the framebuffer. Yes, while converting the BMP image. This
+can easily turn to be very complicated. In fact, it made me question myself why
+I didn&#39;t just use Unity3d to make a game.</p>
+
+<p>For example in our game we were using 320x240 resolution for the PSX. This means
+there were two rectangles of size 320x240 with the top-left origins of (0,0) and
+(0,240). These two areas were used as display buffers, While the area after 320
+pixels horizontally was left for loading the textures. Having a background image
+of size 320x240 for each background, I tried to set their origins to (320,0).
+For some reason, the right part of the background images were not rendered.
+After some while I found out that the textures couldn&#39;t be bigger than 256
+pixels in each dimension, so I divided the background images to two separate
+images of size 160x240, loading them to framebuffer origins (320,0) and (480,0).</p>
+
+<p>One has to be careful about the origins in the framebuffer, if you place the
+textures in overlapping places in the VRAM, and later load the overlapping
+images in your code, the image which you load previously would be overwritten
+by the overlapping image.</p>
+
+<p>Anyway, this was just a jam game so I&#39;m sure there are bunch of interesting
+stuff about PSXSDK which I&#39;m not aware of. To sum up, it was a nice experience
+to work on a 20 year old platform! kthxbye!</p>
+
+</div>
+
+          <div class="footer">
+          </div>
+        </div>
+    </body>
+</html>
